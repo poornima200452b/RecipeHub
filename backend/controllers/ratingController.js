@@ -1,19 +1,18 @@
 
-const Rating = require("../models/ratingModel");
 const Recipe = require("../models/recipeModel");
+const {
+    addOrUpdateRecipeRating,
+    getRatingSummary,
+    parseRating
+} = require("../utils/recipeRatings");
 
 // Add or update a rating
 const rateRecipe = async (req, res) => {
     try {
-        const { rating } = req.body;
+        const rating = parseRating(req.body.rating);
         const { recipeId } = req.params;
 
-        if (
-            rating === undefined ||
-            !Number.isInteger(rating) ||
-            rating < 1 ||
-            rating > 5
-        ) {
+        if (rating === null) {
             return res.status(400).json({
                 message: "Rating must be a whole number from 1 to 5"
             });
@@ -27,27 +26,25 @@ const rateRecipe = async (req, res) => {
             });
         }
 
-        const savedRating = await Rating.findOneAndUpdate(
-            {
-                recipe: recipeId,
-                user: req.user.id
-            },
-            {
-                rating
-            },
-            {
-                new: true,
-                upsert: true,
-                runValidators: true,
-                setDefaultsOnInsert: true
-            }
-        );
+        addOrUpdateRecipeRating(recipe, req.user.id, rating);
+        await recipe.save();
 
         res.status(200).json({
             message: "Rating submitted successfully",
-            rating: savedRating
+            rating: {
+                recipe: recipe._id,
+                user: req.user.id,
+                rating
+            },
+            ...getRatingSummary(recipe.ratings)
         });
     } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                message: "Invalid recipe ID"
+            });
+        }
+
         res.status(500).json({
             message: "Failed to submit rating",
             error: error.message
@@ -68,31 +65,17 @@ const getRecipeRating = async (req, res) => {
             });
         }
 
-        const result = await Rating.aggregate([
-            {
-                $match: {
-                    recipe: recipe._id
-                }
-            },
-            {
-                $group: {
-                    _id: "$recipe",
-                    averageRating: { $avg: "$rating" },
-                    totalRatings: { $sum: 1 }
-                }
-            }
-        ]);
-
         res.status(200).json({
             recipeId,
-            averageRating: result.length
-                ? Number(result[0].averageRating.toFixed(1))
-                : 0,
-            totalRatings: result.length
-                ? result[0].totalRatings
-                : 0
+            ...getRatingSummary(recipe.ratings)
         });
     } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                message: "Invalid recipe ID"
+            });
+        }
+
         res.status(500).json({
             message: "Failed to fetch rating",
             error: error.message

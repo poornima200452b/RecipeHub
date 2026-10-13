@@ -7,9 +7,6 @@ const bcrypt = require("bcryptjs");
 const registerUser = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
-        console.log("REGISTER CONTROLLER HIT");
-        console.log("Role received:", role);
-        console.log("REGISTER ROLE RECEIVED:", role);
 
         // Check required fields
         if (!name || !email || !password) {
@@ -20,10 +17,6 @@ const registerUser = async (req, res) => {
 
         // Validate role
         const selectedRole = role || "user";
-        console.log("DEBUG ROLE:", {
-        receivedRole: role,
-        selectedRole: selectedRole
-        });
 
         if (!["user", "chef"].includes(selectedRole)) {
             return res.status(400).json({
@@ -69,8 +62,6 @@ const registerUser = async (req, res) => {
             role: selectedRole
         });
     
-
-        console.log("REGISTER ROLE SAVED:", user.role);
 
         return res.status(201).json({
             message: "Registration successful",

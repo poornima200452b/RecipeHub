@@ -51,12 +51,6 @@ app.get("/api/auth/profile", protect, (req, res) => {
     });
 });
 
-app.use("/api/auth", (req, res, next) => {
-    console.log("AUTH REQUEST:", req.method, req.originalUrl);
-    next();
-});
-
-
 // Authentication routes
 app.use("/api/auth", authRoutes);
 

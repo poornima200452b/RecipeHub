@@ -1,5 +1,10 @@
 
 const Recipe = require("../models/recipeModel");
+const {
+  addOrUpdateRecipeRating,
+  getRatingSummary,
+  parseRating,
+} = require("../utils/recipeRatings");
 
 // Create a recipe
 const createRecipe = async (req, res) => {
@@ -139,10 +144,9 @@ const getRecipeById = async (req, res) => {
 // Rate a recipe
 const rateRecipe = async (req, res) => {
   try {
-    const { rating } = req.body;
-    const value = Number(rating);
+    const value = parseRating(req.body.rating);
 
-    if (!Number.isInteger(value) || value < 1 || value > 5) {
+    if (value === null) {
       return res.status(400).json({
         message: "Rating must be a whole number between 1 and 5",
       });
@@ -156,35 +160,12 @@ const rateRecipe = async (req, res) => {
       });
     }
 
-    if (!recipe.ratings) {
-      recipe.ratings = [];
-    }
-
-    const userId = req.user.id;
-
-    const existingRating = recipe.ratings.find(
-      (item) => item.user.toString() === userId.toString()
-    );
-
-    if (existingRating) {
-      existingRating.value = value;
-    } else {
-      recipe.ratings.push({
-        user: userId,
-        value,
-      });
-    }
-
+    addOrUpdateRecipeRating(recipe, req.user.id, value);
     await recipe.save();
-
-    const averageRating =
-      recipe.ratings.reduce((sum, item) => sum + item.value, 0) /
-      recipe.ratings.length;
 
     res.status(200).json({
       message: "Rating submitted successfully",
-      averageRating: Number(averageRating.toFixed(1)),
-      totalRatings: recipe.ratings.length,
+      ...getRatingSummary(recipe.ratings),
     });
   } catch (error) {
     res.status(500).json({
@@ -218,18 +199,9 @@ const getTopRatedRecipes = async (req, res) => {
 
     const topRatedRecipes = recipes
       .map((recipe) => {
-        const ratings = recipe.ratings || [];
-
-        const averageRating =
-          ratings.length > 0
-            ? ratings.reduce((sum, item) => sum + item.value, 0) /
-              ratings.length
-            : 0;
-
         return {
           ...recipe.toObject(),
-          averageRating: Number(averageRating.toFixed(1)),
-          totalRatings: ratings.length,
+          ...getRatingSummary(recipe.ratings),
         };
       })
       .filter((recipe) => recipe.totalRatings > 0)
