@@ -64,7 +64,7 @@ function Register() {
           <button
             type="button"
             className={`role-option ${
-              formData.role === "user" ? "selected" : ""
+              formData.role === "user" ? "active" : ""
             }`}
             onClick={() =>
               setFormData({ ...formData, role: "user" })
@@ -77,7 +77,7 @@ function Register() {
           <button
             type="button"
             className={`role-option ${
-              formData.role === "chef" ? "selected" : ""
+              formData.role === "chef" ? "active" : ""
             }`}
             onClick={() =>
               setFormData({ ...formData, role: "chef" })
@@ -119,7 +119,7 @@ function Register() {
           value={formData.password}
           onChange={handleChange}
           required
-          minLength={6}
+          minLength={8}
         />
 
         <button type="submit" disabled={loading}>
